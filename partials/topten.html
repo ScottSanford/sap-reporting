@@ -1,0 +1,54 @@
+<div class="panel-body">
+
+          <div class="row dates">
+
+                <div ng-controller="DatepickerDemoCtrl">
+
+                        <div class="col-md-3">
+                            Start Date:
+                            <p class="input-group">
+                              <input type="text" class="form-control" datepicker-popup="MM.dd.yyyy" ng-model="dt" is-open="opened" min-date="minDate" max-date="'2015-06-22'" datepicker-options="dateOptions" date-disabled="disabled(date, mode)" ng-required="true" close-text="Close" />
+                              <span class="input-group-btn">
+                                <button type="button" class="btn btn-default" ng-click="open($event)"><i class="fa fa-calendar"></i></button>
+                              </span>
+                            </p>
+                        </div>
+                        
+                </div>
+
+                <div ng-controller="DatepickerDemoCtrl">
+
+                        <div class="col-md-3">
+                            End Date:
+                            <p class="input-group">
+                              <input type="text" class="form-control" datepicker-popup="MM.dd.yyyy" ng-model="dt" is-open="opened" min-date="minDate" max-date="'2015-06-22'" datepicker-options="dateOptions" date-disabled="disabled(date, mode)" ng-required="true" close-text="Close" />
+                              <span class="input-group-btn">
+                                <button type="button" class="btn btn-default" ng-click="open($event)"><i class="fa fa-calendar"></i></button>
+                              </span>
+                            </p>
+                        </div>
+                      
+                </div> 
+                         
+          </div> 
+
+          <hr /> <!-- line break -->
+
+    <table class="table">
+        <thead>
+         <tr>
+            <th>Rank</th>
+            <th>Top Users</th>
+            <th>Content Views</th>
+         </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="i in getNumber(number) track by $index">
+           <td>{{$index+1}}</td>
+           <td>user.name@sap.com</td>
+           <td>#number#</td>
+          </tr>    
+         </tbody> 
+    </table>
+
+</div> <!-- panel body closing tag -->

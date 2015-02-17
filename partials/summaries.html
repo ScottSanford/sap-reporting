@@ -1,0 +1,68 @@
+<div class="panel-body" id="summary-body">
+
+<!--   <span class="alert alert-info" ng-show="isViewLoading">Loading the view... </span>
+ -->
+    <table class="table">
+      <thead>
+       <tr>
+          <th>Quarterly</th>
+          <th>Active Users</th>
+          <th>Content Views</th>
+          <th>Guest Users</th>
+          <th>Guest Views</th>
+       </tr>
+      </thead>
+        <tbody>
+          <tr ng-repeat="quarterly in quarters track by $index">
+           <td>{{quarterly.date}}</td>
+           <td>{{quarterly.activeUsers.length}}</td>
+           <td>{{quarterly.allViewsCount}}</td>
+           <td>{{quarterly.guestUsersCount}}</td>
+           <td>{{quarterly.guestViewsCount}}</td> 
+          </tr>    
+        </tbody> 
+    </table>
+
+     <table class="table">
+      <thead>
+       <tr>
+          <th>Monthly</th>
+          <th>Active Users</th>
+          <th>Content Views</th>
+          <th>Guest Users</th>
+          <th>Guest Views</th>
+       </tr>
+      </thead>
+        <tbody>
+          <tr ng-repeat="monthly in months track by $index">
+           <td>{{monthly.date}}</td>
+           <td>{{monthly.activeUsers.length}}</td>
+           <td>{{monthly.allViewsCount}}</td>
+           <td>{{monthly.guestUsersCount}}</td>
+           <td>{{monthly.guestViewsCount}}</td>
+          </tr>    
+        </tbody> 
+    </table>
+
+    <table class="table">
+      <thead>
+       <tr>
+          <th>Week Ending</th>
+          <th>Active Users</th>
+          <th>Content Views</th>
+          <th>Guest Users</th>
+          <th>Guest Views</th>
+       </tr>
+      </thead>
+        <tbody>
+          <tr ng-repeat="weekly in weeks track by $index">
+             <td>{{weekly.date}}</td>
+             <td>{{weekly.activeUsers.length}}</td>
+             <td>{{weekly.allViewsCount}}</td>
+             <td>{{weekly.guestUsersCount}}</td>
+             <td>{{weekly.guestViewsCount}}</td>
+          </tr>    
+        </tbody> 
+    </table> 
+
+</div>

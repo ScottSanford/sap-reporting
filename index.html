@@ -1,0 +1,111 @@
+<!DOCTYPE HTML>
+<html ng-app="reporting">
+<head>
+  	<title>Executive Reporting</title>
+
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+   	<meta name="apple-mobile-web-app-capable" content="yes" />
+   	<meta name="apple-mobile-web-app-status-bar-style" content="black"> 
+
+
+	  <link rel="stylesheet" type="text/css" href="css/bootstrap.css">
+   	<link rel="stylesheet" type="text/css" href="css/styles.css"/>
+    <link rel="stylesheet" type="text/css" href="css/jquery.mmenu.css"></li>
+    <link rel="stylesheet" type="text/css" href="css/font-awesome.css">
+    <link rel="stylesheet" type="text/css" href="css/mfly-menu.css">
+    <link rel="stylesheet" href="css/loading-bar.css">
+
+
+</head>
+<body>
+    <!-- Standardized Interactive Menu -->
+
+
+        <div class="page">
+            <div class="header">
+                <a href="#menu"><span class="fa fa-bars fa-2x" id="hamburger-menu"></span></a>
+        </div>
+
+         <nav id="menu">
+                <ul>
+                    <li class="annotations">
+                      <i class="fa fa-pencil-square-o"></i> Annotations
+                    </li>
+                    <li class="second-screen">
+                      <i class="fa fa-slideshare"></i> Second Screen
+                    </li>
+                    <li class="collections">
+                      <i class="fa fa-plus"></i> Collections
+                    </li>
+                    <li class="email">
+                      <i class="fa fa-share"></i> Email
+                    </li>
+
+              <!--  <li class="comments">
+                      <i class="fa fa-comments"></i> Comments</li>
+                    <li class="notes">
+                      <i class="fa fa-pencil"></i> Notes
+                    </li> -->
+
+
+                    <li class="previous">
+                      <i class="fa fa-arrow-left"></i> Previous
+                    </li>
+                    <li class="next">
+                      <i class="fa fa-arrow-right"></i> Next
+                    </li>
+                    <li class="close-btn">
+                      <i class="fa fa-close"></i> Close
+                    </li>
+                </ul>
+        </nav>
+
+<div class="container" ng-controller="HeaderCtrl">
+   <div class="row">
+      <header>Reporting Dashboard</header>
+   </div>
+
+    <div class="panel panel-default">
+
+        <div class="panel panel-heading">
+            <a href="#" class="link">Summaries</a> | <a href="#/topten" class="link">Top 10</a>
+            <span class="pull-right todays-date">Today: {{date | date:'mediumDate'}}</span>
+        </div>
+
+        <div ng-view></div>
+        
+    </div>
+
+</div>
+
+
+
+
+  <!-- jQuery -->
+  <script src="js/jquery-1.11.2.min.js"></script>
+  <script src="js/jquery.mmenu.min.js"></script>
+  <script src="js/fastclick.js"></script>
+  <script src="js/my-jquery.js"></script>
+
+  <!-- Moment.js -->
+  <script src="js/lib/moment.js"></script>
+
+  <!-- Mediafly -->
+  <script src="js/mflyCommands.js"></script>
+
+  <!-- Angular -->
+  <script src="js/angular.js"></script>
+  <script src="js/modules/angular-moment.js"></script>
+  <script src="js/modules/ui-bootstrap-tpls-0.12.0.min.js"></script>
+  <script src="js/modules/angular-route.js"></script>
+  <script src="js/modules/angular-loading-bar.js"></script>
+  <script src="js/script.js"></script>
+
+  <!-- Services -->
+  <script src="js/services/csv-converter.js"></script>
+  <script src="js/services/date-converter.js"></script>
+
+</body>
+</html>

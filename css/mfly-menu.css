@@ -1,0 +1,19 @@
+#hamburger-menu {
+	color:#000;
+}
+
+@font-face {
+	font-family:'OpenSans-Regular';
+	src:url('../_fonts/OpenSans-Regular.ttf');
+	}
+
+#menu li {
+	font-size: 18px;
+	padding: 10px 5px;
+	margin-left: 10px;
+}
+
+.title {
+	text-align: center;
+	font-size: 30px;
+}
