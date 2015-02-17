@@ -39,7 +39,7 @@ angular.module('reporting', [
 
 	.controller('SummariesCtrl', function($scope, summaryData, moment){
 
-		// get latest record in data 
+		// GET LATEST RECORD *************************************
 		var getLatestRecord = function() {
 			// return newest record 
 			var latestRecord = null;
@@ -59,34 +59,7 @@ angular.module('reporting', [
 			return latestRecord;
 		}
 
-		// get week ending date
-		Date.prototype.endOfMonth = function(){
-		  return new Date( 
-		      this.getFullYear(), 
-		      this.getMonth()
-		  );
-		};
-
-		Date.prototype.endOfWeek = function(){
-		  return new Date( 
-		      this.getFullYear(), 
-		      this.getMonth(), 
-		      this.getDate() + 7 - this.getDay() 
-		  );
-		};
-
-		// date ranges for data dates to pass through to find which "range" it belongs to
-		var dateRangeFilter = function(dateRange, row) {
-	
-			var rowDate = new Date(row.IntervalStartDate);
-			var rowDateFormatted = moment(rowDate);
-
-			if (dateRange.start <= rowDateFormatted && rowDateFormatted <= dateRange.end) {
-				return row;
-			}
-		}
-
-		// 2. Check Active and Guest Users
+		// CHECK ACTIVE AND GUEST USERS *****************************
 
 		var checkIfActiveUser = function(row){
 
@@ -131,36 +104,59 @@ angular.module('reporting', [
   			return rolledUpData;
 		};
 
+		// DATE FILTERS ***************************************************************
+		// date ranges for data dates to pass through to find which "range" it belongs to
+		var dateRangeFilter = function(dateRange, row) {
+	
+			var rowDate = new Date(row.IntervalStartDate);
+			var rowDateFormatted = moment(rowDate);
 
-
-		// quarter table starts here
-
-		var quarterFilter = function(quarter, row) {
-
-			var startDate = new Date(row.IntervalStartDate);
-			var startMonth = startDate.getMonth();
-//			var startYear = startDate.getYear();
-
-			var firstQ  = moment().subtract(1, 'quarter').format('QqYY');
-			var secondQ = moment().subtract(2, 'quarter').format('QqYY');
-			var thirdQ  = moment().subtract(3, 'quarter').format('QqYY');
-			var fourthQ = moment().subtract(4, 'quarter').format('QqYY');
-
-			if (quarter == firstQ && (startMonth <= 2)) {
+			if (dateRange.start <= rowDateFormatted && rowDateFormatted <= dateRange.end) {
 				return row;
 			}
+		}
 
-			if (quarter == secondQ && (startMonth > 2 && startMonth <= 5)) {
-				return row;
-			}
+		// get month number
+		Date.prototype.endOfMonth = function(){
+		  return new Date( 
+		      this.getFullYear(), 
+		      this.getMonth()
+		  );
+		};
 
-			if (quarter == thirdQ && (startMonth > 5 && startMonth <= 7)) {
-				return row;
-			}
+		// get week ending date
+		Date.prototype.endOfWeek = function(){
+		  return new Date( 
+		      this.getFullYear(), 
+		      this.getMonth(), 
+		      this.getDate() + 7 - this.getDay() 
+		  );
+		};
 
-			if (quarter == fourthQ && (startMonth > 7)) {
-				return row;
-			}
+		// TABLES ********************************************************************
+		// QUARTER TABLE
+		function getQuarterRanges() {
+			var latestRecord = getLatestRecord();
+
+			var start = moment(latestRecord).subtract(2, 'months');
+			var end   = latestRecord;
+
+			return [
+				{ start: moment(start), end: moment(end) },
+				{ start: moment(start).subtract(1, 'quarter'), end: moment(end).subtract(1, 'quarter') },
+				{ start: moment(start).subtract(2, 'quarter'), end: moment(end).subtract(2, 'quarter') },
+				{ start: moment(start).subtract(3, 'quarter'), end: moment(end).subtract(3, 'quarter') },
+				{ start: moment(start).subtract(4, 'quarter'), end: moment(end).subtract(4, 'quarter') }
+			]
+		}
+
+		function displayQuarterDate(record) { 
+
+			var recordDate  = new Date(record.IntervalStartDate);
+
+			var end = recordDate;
+
+			return moment(end).format("QqYY");
 
 		}
 
@@ -169,57 +165,32 @@ angular.module('reporting', [
 			// init rolledUpData
   			var rolledUpData = {
   				date: previousRolledUpData.date || displayQuarterDate(record),
-			    activeUsers: (previousRolledUpData.activeUsers || []),
-			    allViewsCount: Number(previousRolledUpData.allViewsCount || 0), 
-	  			guestUsersCount: previousRolledUpData.guestUsersCount || 0,
-			    guestViewsCount: Number(previousRolledUpData.guestViewsCount || 0)
+			    activeUsers: (previousRolledUpData.activeUsers),
+			    allViewsCount: Number(previousRolledUpData.allViewsCount), 
+	  			guestUsersCount: previousRolledUpData.guestUsersCount,
+			    guestViewsCount: Number(previousRolledUpData.guestViewsCount)
   			}; 
 
   			return rollUpDataForRecord(rolledUpData, record);
 		};
 
-		function outputQuarters() {
-			var date = new Date(new Date().getFullYear(), 0, 1);
-			return [
-				moment(date).subtract(1, 'quarter').format('QqYY'),
-				moment(date).subtract(2, 'quarter').format('QqYY'),
-				moment(date).subtract(3, 'quarter').format('QqYY'),
-				moment(date).subtract(4, 'quarter').format('QqYY'),
-			];
-		}
+		$scope.quarters = getQuarterRanges().map(function(quarter){
 
-		function displayQuarterDate(record) { 
-
-			var startDate  = new Date(record.IntervalStartDate);
-			var startMonth = startDate.getMonth();
-
-			var firstQ  = moment().subtract(1, 'quarter').format('QqYY');
-			var secondQ = moment().subtract(2, 'quarter').format('QqYY');
-			var thirdQ  = moment().subtract(3, 'quarter').format('QqYY');
-			var fourthQ = moment().subtract(4, 'quarter').format('QqYY');
-
-			if (startMonth <= 2) {
-				return  firstQ;
-			} else if (startMonth > 2 && startMonth <= 5) {
-				return secondQ;
-			} else if (startMonth > 5 && startMonth <= 7) {
-				return thirdQ;
-			} else if (startMonth > 7) {
-				return fourthQ;
-			}
-
-		}
-
-		$scope.quarters = outputQuarters().map(function(quarter){
-
+			var initValue = {
+				date: moment(quarter.end).format("QqYY"),
+			    activeUsers: [],
+			    allViewsCount: 0, 
+	  			guestUsersCount: 0,
+			    guestViewsCount: 0
+			};
 			var data = summaryData
-				.filter(quarterFilter.bind(this, quarter))
-				.reduce(quarterReduction);
+				.filter(dateRangeFilter.bind(this, quarter))
+				.reduce(quarterReduction, initValue);
 
 			return data;
 		});
 
-		// month table starts here
+		// MONTH TABLE
 		function getMonthRanges() {
 			var latestRecord = getLatestRecord();
 
@@ -250,10 +221,10 @@ angular.module('reporting', [
 			// init rolledUpData
   			var rolledUpData = {
   				date: previousRolledUpData.date || displayMonthDate(record),
-			    activeUsers: (previousRolledUpData.activeUsers || []),
-			    allViewsCount: Number(previousRolledUpData.allViewsCount || 0), 
-	  			guestUsersCount: previousRolledUpData.guestUsersCount || 0,
-			    guestViewsCount: Number(previousRolledUpData.guestViewsCount || 0)
+			    activeUsers: (previousRolledUpData.activeUsers),
+			    allViewsCount: Number(previousRolledUpData.allViewsCount), 
+	  			guestUsersCount: previousRolledUpData.guestUsersCount,
+			    guestViewsCount: Number(previousRolledUpData.guestViewsCount)
   			}; 
 
   			return rollUpDataForRecord(rolledUpData, record);
@@ -262,11 +233,17 @@ angular.module('reporting', [
 		// output to view
 		$scope.months = getMonthRanges().map(function(month){
 
-			console.log("************************* " + month.start + " - " + month.end);
 
+			var initValue = {
+				date: moment(month.end).format("MMM YYYY"),
+			    activeUsers: [],
+			    allViewsCount: 0, 
+	  			guestUsersCount: 0,
+			    guestViewsCount: 0
+			};
 			var data = summaryData
 				.filter(dateRangeFilter.bind(this, month))
-				.reduce(monthReduction);
+				.reduce(monthReduction, initValue);
 
 			return data;
 		});
@@ -276,7 +253,7 @@ angular.module('reporting', [
 		// get Monday, start of week
 		var getMonday = moment(endofWeekDate).weekday(-6).format('l');
 
-		// week table starts here
+		// WEEK TABLE
 		function getWeekRanges() {
 
 			var latestRecord = getLatestRecord();
@@ -307,10 +284,10 @@ angular.module('reporting', [
 			// init rolledUpData
   			var rolledUpData = {
   				date: previousRolledUpData.date || displayWeekDate(record),
-			    activeUsers: (previousRolledUpData.activeUsers || []),
-			    allViewsCount: Number(previousRolledUpData.allViewsCount || 0), 
-	  			guestUsersCount: previousRolledUpData.guestUsersCount || 0,
-			    guestViewsCount: Number(previousRolledUpData.guestViewsCount || 0)
+			    activeUsers: (previousRolledUpData.activeUsers),
+			    allViewsCount: Number(previousRolledUpData.allViewsCount), 
+	  			guestUsersCount: previousRolledUpData.guestUsersCount,
+			    guestViewsCount: Number(previousRolledUpData.guestViewsCount)
   			}; 
 
   			return rollUpDataForRecord(rolledUpData, record);
@@ -318,11 +295,16 @@ angular.module('reporting', [
 
 		$scope.weeks = getWeekRanges().map(function(week){
 
-			// console.log("************************* " + week.start + " - " + week.end);
-
+			var initValue = {
+				date: moment(week.end).format("l"),
+			    activeUsers: [],
+			    allViewsCount: 0, 
+	  			guestUsersCount: 0,
+			    guestViewsCount: 0
+			};
 			var data = summaryData
 				.filter(dateRangeFilter.bind(this, week))
-				.reduce(weekReduction);
+				.reduce(weekReduction, initValue);
 
 			return data;
 		});
