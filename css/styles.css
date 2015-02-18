@@ -1,5 +1,6 @@
 body {
 	background-color: #e9e9e9;
+	font-family: 'Arial';
 }
 
 .loading {
@@ -65,18 +66,32 @@ table {
 	margin-bottom: 5px;
 }
 
-th {
+.summary-tr {
   margin: 0 40px;
   font-size: 1.2em;
   border-bottom: 1px solid;
 }
 
-td {
-	
-}
-
 .dates {
 	margin-left: 25px;
+}
+
+.date-label {
+	margin-left: 20px;
+	padding-bottom:10px;
+}
+
+.asset-list {
+	margin-top: 15px;
+}
+
+.searchbtn {
+	background-color: #008FD3;
+}
+
+.error {
+	color:red;
+	margin-left: 15px;
 }
 
 @media only screen and (max-width: 959px) {
@@ -85,4 +100,37 @@ td {
 		height:750px;
 	}
 
+}
+
+
+/********************Date Picker***********************/
+
+.datepicker.dropdown-menu {
+	width:250px;
+	height:270px;
+}
+
+.datepicker.dropdown-menu button {
+	outline:none;
+	border:0;
+}
+
+.dow {
+	border:none;
+}
+
+.datepicker.dropdown-menu tbody {
+	height: 180px;
+}
+
+.datepicker.dropdown-menu tbody button {
+	padding:6px;
+}
+
+.datepicker.dropdown-menu.datepicker-mode-1 tbody button{
+	height:65px;
+}
+
+.datepicker.dropdown-menu.datepicker-mode-2 tbody button{
+	height:65px;
 }

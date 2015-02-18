@@ -1,8 +1,10 @@
 angular.module('reporting', [
-		'ui.bootstrap', 
 		'ngRoute', 
 		'angularMoment', 
-		'angular-loading-bar'
+		'angular-loading-bar', 
+		'mgcrea.ngStrap', 
+		'ngMessages', 
+		'ngTouch'
 	])
 
 	.constant('moment', moment)
@@ -13,22 +15,19 @@ angular.module('reporting', [
 				templateUrl: 'partials/summaries.html', 
 				controller: 'SummariesCtrl', 
 				resolve: {
-							summaryData: function($http, $q, CSVConverterService){
-								var deferred = $q.defer();
-								$http.get('data/ViewsByUserActivity_01.01.2014_12.31.2014.xls')
-									.success(function (data) {
-										deferred.resolve(CSVConverterService.csvToJSON(data));
-									});
-									return deferred.promise;
-							}, 
-							dateToMonth: function(DateConverterService) {
-								
-							}
+							summaryData: function(reportingInitialData){
+								return reportingInitialData();
+							}		
 						}
 			})
 			.when('/topten', {
 				templateUrl: 'partials/topten.html', 
-				controller: 'ToptenCtrl'
+				controller: 'ToptenCtrl', 
+				resolve: {
+							summaryData: function(reportingInitialData){
+								return reportingInitialData();
+							}		
+						}
 			})
 			.otherwise({redirectTo:'/'})
 	})
@@ -63,7 +62,7 @@ angular.module('reporting', [
 
 		var checkIfActiveUser = function(row){
 
-			if (!row.UserName.match(/^@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of /)) {
+			if (!row.UserName.match(/@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
 				return true;
 			}
 
@@ -79,19 +78,18 @@ angular.module('reporting', [
 			return false;
 		};
 
-			// heavy lifting for users
-
+		// "heavy lifting" for users
 		var rollUpDataForRecord = function(rolledUpData, record) {
 
-  			// increment allViewsCount
-			rolledUpData.allViewsCount += Number(record.Views - 1);
 
 			// do user related things
 			var isUser = checkIfActiveUser(record);
 			if (isUser) {
-	  			if (rolledUpData.activeUsers.indexOf(record.UserName) === -1) {
-	  				rolledUpData.activeUsers.push(record.UserName);
-	  			}
+	  			// increment allViewsCount
+				rolledUpData.allViewsCount += Number(record.Views - 1);
+		  		// if (rolledUpData.activeUsers.indexOf(record.UserName) === -1) {
+		  			rolledUpData.activeUsers.push(record.UserName);
+		  		// }
 			}
 
 			// do user guest things
@@ -138,8 +136,8 @@ angular.module('reporting', [
 		function getQuarterRanges() {
 			var latestRecord = getLatestRecord();
 
-			var start = moment(latestRecord).subtract(2, 'months');
-			var end   = latestRecord;
+			var start = moment(latestRecord).subtract(2, 'months').date(1);
+			var end   = moment(latestRecord).date(31);
 
 			return [
 				{ start: moment(start), end: moment(end) },
@@ -183,9 +181,9 @@ angular.module('reporting', [
 	  			guestUsersCount: 0,
 			    guestViewsCount: 0
 			};
-			var data = summaryData
-				.filter(dateRangeFilter.bind(this, quarter))
-				.reduce(quarterReduction, initValue);
+			var data = summaryData;
+			data = data.filter(dateRangeFilter.bind(this, quarter));
+			data = data.reduce(quarterReduction, initValue);
 
 			return data;
 		});
@@ -194,8 +192,8 @@ angular.module('reporting', [
 		function getMonthRanges() {
 			var latestRecord = getLatestRecord();
 
-			var start = latestRecord.endOfMonth();
-			var end   = latestRecord;
+			var start = moment(latestRecord).date(1);
+			var end   = moment(latestRecord).date(31);
 
 			return [
 				{ start: moment(start), end: moment(end) },
@@ -241,10 +239,10 @@ angular.module('reporting', [
 	  			guestUsersCount: 0,
 			    guestViewsCount: 0
 			};
-			var data = summaryData
-				.filter(dateRangeFilter.bind(this, month))
-				.reduce(monthReduction, initValue);
-
+			var data = summaryData;
+			data = data.filter(dateRangeFilter.bind(this, month));
+			data = data.reduce(monthReduction, initValue);
+				
 			return data;
 		});
 
@@ -311,43 +309,95 @@ angular.module('reporting', [
 	
 	})
 
-    .controller('DatepickerDemoCtrl', function ($scope) {
-	  $scope.today = function() {
-	    $scope.dt = new Date();
-	  };
-	  $scope.today();
+	.controller('ToptenCtrl', function($scope, summaryData){
 
-	  $scope.clear = function () {
-	    $scope.dt = null;
-	  };
+		$scope.fromDate = null;
+    	$scope.untilDate = null;
 
-	  // Disable weekend selection
-	  $scope.disabled = function(date, mode) {
-	    return ( mode === 'day' && ( date.getDay() === 0 || date.getDay() === 6 ) );
-	  };
+    	$scope.search = function(){
+    		// $scope.toptenForm.$valid && inputDateRangeFilter == true  ?
+			if ($scope.toptenForm.$valid) {
 
-	  $scope.toggleMin = function() {
-	    $scope.minDate = $scope.minDate ? null : new Date();
-	  };
-	  $scope.toggleMin();
+        		var f = summaryData.filter(inputDateRangeFilter)
+        						   .filter(checkIfActiveUser)
+        						   .filter(checkIfNotGuest)
+        						   .sort(compareViewCount).reverse()
+        						   .slice(0,10);						 
+        									 
 
-	  $scope.open = function($event) {
-	    $event.preventDefault();
-	    $event.stopPropagation();
+        		$scope.topUsers = f;
 
-	    $scope.opened = true;
-	  };
+			}
+    	}
 
-	  $scope.dateOptions = {
-	    formatYear: 'yy',
-	    startingDay: 1
-	  };
+    	function inputDateRangeFilter(row) {
+    		var rowDate = new Date(row.IntervalStartDate);
 
-	  $scope.formats = ['dd-MMMM-yyyy', 'yyyy/MM/dd', 'dd.MM.yyyy', 'shortDate', 'MM.dd.yyyy'];
-	  $scope.format = $scope.formats[0];
-	})
+    		if ($scope.fromDate <= rowDate && rowDate <= $scope.untilDate) {
+				return true;
+			} else {
+				return false;
+			}
 
-	.controller('ToptenCtrl', function($scope){
+    	}
+
+    	function getTopTenUsers(row) {
+		    var topTenUsers = [];		    
+		    for (var i = 0; i < summaryData.length; i++) {
+		    	var userNameRecords = summaryData[i].UserName;
+		        topTenUsers.push(userNameRecords);
+		        if (topTenUsers.length > 10) {
+		            topTenUsers.pop();
+		        }
+		    }
+		    return topTenUsers;
+		    $scope.topUsers = topTenUsers;
+    	}
+
+
+		function compareViewCount(a, b) {
+		  if (Number(a.Views) < Number(b.Views)) {
+		    return -1;
+		  }
+		  if (Number(a.Views) >= Number(b.Views)) {
+		    return 1;
+		  }
+		}
+
+		var checkIfActiveUser = function(row){
+
+			if (!row.UserName.match(/@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
+				return true;
+			}
+
+			return false;
+		};
+
+		var checkIfNotGuest = function(row) {
+
+			if (row.UserName.match(/Guest of/)) {
+				return false;
+			}
+
+			return true;
+		};
+
+		// $scope.topUsers = getQuarterRanges().map(function(quarter){
+
+		// 	var initValue = {
+		// 		date: moment(quarter.end).format("QqYY"),
+		// 	    activeUsers: [],
+		// 	    allViewsCount: 0, 
+	 //  			guestUsersCount: 0,
+		// 	    guestViewsCount: 0
+		// 	};
+
+		// 	var data = summaryData
+		// 		.filter(inputDateRangeFilter.bind(this, quarter))
+
+		// 	return data;
+		// });
+
 		$scope.number = 10;
 		$scope.getNumber = function(num) {
 			return new Array(num);

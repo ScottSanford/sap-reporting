@@ -70,7 +70,7 @@
     <div class="panel panel-default">
 
         <div class="panel panel-heading">
-            <a href="#" class="link">Summaries</a> | <a href="#/topten" class="link">Top 10</a>
+            <a href="#/" class="link">Summaries</a> | <a href="#/topten" class="link">Top 10</a>
             <span class="pull-right todays-date">Today: {{date | date:'mediumDate'}}</span>
         </div>
 
@@ -96,16 +96,20 @@
   <script src="js/mflyCommands.js"></script>
 
   <!-- Angular -->
-  <script src="js/angular.js"></script>
+  <script src="js/angular.min.js"></script>
   <script src="js/modules/angular-moment.js"></script>
-  <script src="js/modules/ui-bootstrap-tpls-0.12.0.min.js"></script>
   <script src="js/modules/angular-route.js"></script>
   <script src="js/modules/angular-loading-bar.js"></script>
+  <script src="js/modules/angular-strap.js"></script>
+  <script src="js/modules/angular-strap.tpl.js"></script>
+  <script src="js/modules/ngMessages.js"></script>
+  <script src="js/modules/ngTouch.js"></script>
   <script src="js/script.js"></script>
 
   <!-- Services -->
   <script src="js/services/csv-converter.js"></script>
   <script src="js/services/date-converter.js"></script>
+  <script src="js/services/initialize-data.js"></script>
 
 </body>
 </html>
