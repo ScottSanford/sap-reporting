@@ -39,8 +39,8 @@
         <tbody>
           <tr ng-repeat="topTen in topUsers track by $index">
            <td>{{$index+1}}</td>
-           <td>{{topTen.UserName}}</td>
-           <td>{{topTen.Views}}</td>
+           <td>{{topTen.User}}</td>
+           <td>{{topTen.Views | number}}</td>
           </tr>    
          </tbody> 
     </table>

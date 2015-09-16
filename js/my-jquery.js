@@ -1,5 +1,8 @@
 $(document).ready(function(){
 
+ //    var HOSTNAME = window.location.origin.indexOf('localhost') ? "http://localhost:8000/" : "mfly://"
+	// mflyCommands.setPrefix(HOSTNAME);
+
 	document.addEventListener('touchmove', function(event) {
     	event.preventDefault();
     }, false);
@@ -75,10 +78,16 @@ $(document).ready(function(){
 		mflyCommands.next();
 	})
 
+	$('.refresh').bind("touchstart click" , function(){
+		$('#menu').trigger("close.mm");
+		mflyCommands.refresh();
+	})
+	
+
 	$('.close-btn').bind("touchstart click" , function(){
 		$('#menu').trigger("close.mm");
 		mflyCommands.close();
-	})
+	})		
 
 
 });

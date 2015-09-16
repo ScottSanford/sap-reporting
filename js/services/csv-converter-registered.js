@@ -1,4 +1,4 @@
-angular.module('reporting').factory('CSVConverterService', [function () {
+angular.module('reporting').factory('CSVConverterRegisteredUsers', [function () {
 
     return {
         csvToJSON : function(content) {
@@ -11,7 +11,7 @@ angular.module('reporting').factory('CSVConverterService', [function () {
                         var headers = [];
                         // if (content.header) {
                         headers=lines[2].split(separator);
-                        start = 3;
+                        start = 1;
                         // }
 
                         for (var i=start; i<lines.length; i++) {
@@ -30,15 +30,10 @@ angular.module('reporting').factory('CSVConverterService', [function () {
                                 // }
                                 obj = { 
                                     User: currentline[0], 
-                                    IntervalStart: currentline[1], 
-                                    IntervalEnd: currentline[2], 
-                                    Views: currentline[3]
                                 }
-
                                 result.push(obj);
                             }
                         }
-                        console.log(result);
                         return result;
                     }
     }

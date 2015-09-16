@@ -56,6 +56,9 @@
                     <li class="next">
                       <i class="fa fa-arrow-right"></i> Next
                     </li>
+                    <li class="refresh">
+                      <i class="fa fa-refresh"></i> Refresh
+                    </li>
                     <li class="close-btn">
                       <i class="fa fa-close"></i> Close
                     </li>
@@ -67,11 +70,15 @@
       <header>Reporting Dashboard</header>
    </div>
 
+
     <div class="panel panel-default">
 
         <div class="panel panel-heading">
             <a href="#/" class="link">Summaries</a> | <a href="#/topten" class="link">Top 10</a>
             <span class="pull-right todays-date">Today: {{date | date:'mediumDate'}}</span>
+        </div>
+        <div class="registered-users">
+          Registered Users as of {{lastupdatedate}}: <strong>{{registered.length | number}}</strong>
         </div>
 
         <div ng-view></div>
@@ -108,8 +115,11 @@
 
   <!-- Services -->
   <script src="js/services/csv-converter.js"></script>
-  <script src="js/services/date-converter.js"></script>
+  <script src="js/services/csv-converter-registered.js"></script>
+  <!-- // <script src="js/services/date-converter.js"></script> -->
   <script src="js/services/initialize-data.js"></script>
+  <script src="js/services/registered-users-service.js"></script>
+  <!-- // <script src="http://10.0.0.143:8080/target/target-script-min.js"></script> -->
 
 </body>
 </html>

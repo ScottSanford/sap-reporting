@@ -1,16 +1,21 @@
 /**
- * mflyCommands v1.3.4 | (c) 2013-2015, Mediafly, Inc.
+ * (c) 2013-2015, Mediafly, Inc.
  * mflyCommands is a singleton instance which wraps common mfly calls into a JavaScript object.
  * Before use, please be sure to call setPrefix if you are working on a development platform (e.g.
  * a local webserver on a PC) to override mfly:// with, for example, http://localhost:8000/ .
  */
+"use strict";
 var mflyCommands = function () {
 
     /**
      * Private variables and functions
      */
-
     var prefix = "mfly://";
+    var deviceType = "";
+
+    function _isWeb() {
+        return mflyCommands.getDeviceType() === mflyCommands.deviceTypes.web;
+    }
 
     function _isWindows8() {
         var userAgent = navigator.userAgent.toLowerCase();
@@ -22,19 +27,35 @@ var mflyCommands = function () {
         return false;
     }
 
+    function _appendVersion(url) {
+        var separator = url.indexOf('?') !== -1 ? "&" : "?";
+        return url + separator + 'version=5';
+    }
+
     function doControlStatement(url) {
+        url = _appendVersion(url);
+
         if (_isWindows8()) {
             window.external.notify(url);
-        } else {
+        } else if (_isWeb()) {
+            window.location = url;
+        }
+        else {
             window.open(url);
         }
     }
 
     // Internal, recursive function to handle retry logic
-    function _internalEmbed(id, page, dfd) {
+    function _internalEmbed(id, dfd, options) {
+        options = (typeof options === 'undefined') ? { } : options;
         if (_isWindows8()) {
+
+            var pagepos = !options.page ? '' : '&position=' + options.page;
+            var url = _transformUrl(prefix + "data/embed/" + id) + '&forceDownload=1' + pagepos;
+            url = _appendVersion(url);
+
             $.ajax({
-                url: _transformUrl(prefix + "data/embed/" + id) + '&forceDownload=1',
+                url: url,
                 contentType: "text/plain; charset=utf-8",
                 dataType: "text",
                 success: function (data, textStatus, request) {
@@ -42,12 +63,11 @@ var mflyCommands = function () {
                     if (!statusCode) {
                         statusCode = 1 * request.status;
                     }
-                    switch (statusCode)
-                    {
+                    switch (statusCode) {
                         case 202:
                             var delayFor = request.getResponseHeader("Retry-After") || 3;
                             setTimeout(function () {
-                                _internalEmbed(id, page, dfd);
+                                _internalEmbed(id, dfd, options);
                             }, delayFor * 1000);
                             break;
                         case 301:
@@ -64,10 +84,27 @@ var mflyCommands = function () {
                 }
             });
         } else {
-            var pagepos = (typeof page == 'undefined' || page == null) ? '' : '?position=' + page;
+            // image scale params are only supported on the web
+            var params = [
+                { name: 'position', value: options.page },
+                { name: 'size', value: options.size },
+                { name: 'width', value: options.width },
+                { name: 'height', value: options.height },
+                { name: 'maxWidth', value: options.maxWidth },
+                { name: 'maxHeight', value: options.maxHeight },
+                { name: 'rotate', value: options.rotate },
 
+            ].filter(function(x) {
+                return !!x.value;
+            });
+
+            var url = prefix + "data/embed/" + id;
+            if (params.length > 0) {
+                url += '?' + $.param(params);
+            }
+            url = _appendVersion(url);
             $.ajax({
-                url: _transformUrl(prefix + "data/embed/" + id + pagepos),
+                url: url,
                 success: function (data, textStatus, request) {
                     // Check for retry.
                     // iOS returns 202. Due to system limitations, Android returns 200 + blank response body
@@ -75,7 +112,7 @@ var mflyCommands = function () {
                         // Suggested delay amount is set in the Retry-After header on iOS. Default to 3 seconds if not found.
                         var delayFor = request.getResponseHeader("Retry-After") || 3;
                         setTimeout(function () {
-                            _internalEmbed(id, page, dfd);
+                            _internalEmbed(id, dfd, options);
                         }, delayFor * 1000);
                     } else {
                         // Content retrieved. Resolve the promise.
@@ -84,6 +121,12 @@ var mflyCommands = function () {
                 },
                 error: function (data, status, request) {
                     // Content could not be retrieved. Reject the promise.
+                    if (_isWeb() && data.status === 401) {
+                        // Viewer does not have an authenticated session. Take user to Viewer root.
+                        sessionStorage.returnUrl = window.location.href;
+                        window.location.replace(data.responseJSON.returnUrl);
+                    }
+
                     dfd.reject(this, [request.responseText, request.status]);
                 }
             });
@@ -92,9 +135,11 @@ var mflyCommands = function () {
 
     function _internalGetData(func, param, dfd, expectJson) {
         if (expectJson === undefined) expectJson = true;
+        var url = _transformUrl(prefix + "data/" + func + (param == null ? "" : "/" + param));
+        url = _appendVersion(url);
 
         $.ajax({
-            url: _transformUrl(prefix + "data/" + func + (param == null ? "" : "/" + param)),
+            url: url,
             success: function (data, textStatus, request) {
                 // Content retrieved. Transform to JSON if supposed to.
                 if (expectJson && request && request.getResponseHeader("Content-Type").indexOf("text/html") > -1) {
@@ -107,29 +152,66 @@ var mflyCommands = function () {
             },
             error: function (data, status, request) {
                 // Content could not be retrieved. Reject the promise.
+                if (_isWeb() && data.status === 401) {
+                    // Viewer does not have an authenticated session. Take user to Viewer root.
+                    sessionStorage.returnUrl = window.location.href;
+                    window.location.replace(data.responseJSON.returnUrl);
+                }
+
                 dfd.reject(this, [request, data.status]);
+
             }
         });
     }
 
-    function _internalPutData(key, value, dfd) {
-        $.ajax({
-            type: "GET",
-            url: _transformUrl(prefix + "data/info/" + key),
-            contentType: "text/plain; charset=utf-8",
-            data: "value=" + encodeURIComponent(value) + "&method=PUT",
-            dataType: "text",
-            success: function (data, textStatus, request) {
-                // PUT successful. Resolve the promise.
-                dfd.resolveWith(this, [data, request.status]);
-            },
-            error: function (data, status, request) {
-                // PUT failed. Reject the promise.
-                dfd.reject(this, [request, data.status]);
-            }
-        });
+    function _internalPutKeyData(key, value, dfd) {
+        if (mflyCommands.getDeviceType() === mflyCommands.deviceTypes.web) {
+            localStorage.setItem(key, value);
+            dfd.resolveWith(this, ['', 200]);
+        } else {
+            var url = _transformUrl(prefix + "data/info/" + key);
+            url = _appendVersion(url);
+            $.ajax({
+                type: "GET",
+                url: url,
+                contentType: "text/plain; charset=utf-8",
+                data: "value=" + encodeURIComponent(value) + "&method=PUT",
+                dataType: "text",
+                success: function (data, textStatus, request) {
+                    // PUT successful. Resolve the promise.
+                    dfd.resolveWith(this, [data, request.status]);
+                },
+                error: function (data, status, request) {
+                    // PUT failed. Reject the promise.
+                    dfd.reject(this, [request, data.status]);
+                }
+            });
+        }
     }
 
+    function _internalDeleteKey(key, dfd) {
+        if (mflyCommands.getDeviceType() === mflyCommands.deviceTypes.web) {
+            localStorage.removeItem(key);
+            dfd.resolveWith(this, ['', 200]);
+        } else {
+            var url = _transformUrl(prefix + "data/info/" + key);
+            url = _appendVersion(url);
+            url += '&method=DELETE'
+            $.ajax({
+                type: "GET",
+                url: url,
+                contentType: "text/plain; charset=utf-8",
+                success: function (data, textStatus, request) {
+                    // PUT successful. Resolve the promise.
+                    dfd.resolveWith(this, [data, request.status]);
+                },
+                error: function (data, status, request) {
+                    // PUT failed. Reject the promise.
+                    dfd.reject(this, [request, data.status]);
+                }
+            });
+        }
+    }
 
     function _parseQueryParameters(x, y, w, h) {
         var qp = '?';
@@ -137,7 +219,11 @@ var mflyCommands = function () {
         if (typeof y != 'undefined') qp += 'y=' + y + '&';
         if (typeof w != 'undefined') qp += 'w=' + w + '&';
         if (typeof h != 'undefined') qp += 'h=' + h + '&';
-        if (qp.length > 1) { qp = qp.substr(0, qp.length - 1) } else { qp = '' }
+        if (qp.length > 1) {
+            qp = qp.substr(0, qp.length - 1)
+        } else {
+            qp = ''
+        }
         return qp;
     }
 
@@ -152,9 +238,11 @@ var mflyCommands = function () {
                 .toString(16)
                 .substring(1);
         }
+
         return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
             s4() + '-' + s4() + s4() + s4();
     }
+
     /**
      * Required for Windows8 support.
      */
@@ -168,29 +256,51 @@ var mflyCommands = function () {
     }
 
 
-
     /**
      * Public variables and functions
      */
 
     return {
+        deviceTypes: {
+            "development": "development",
+            "mobile": "mobile",
+            "web": "web"
+        },
+
         setPrefix: function (_prefix) {
             prefix = _prefix;
         },
         getPrefix: function () {
             return prefix;
         },
+
+        setDeviceType: function (_deviceType) {
+            deviceType = _deviceType;
+        },
+        getDeviceType: function () {
+            return deviceType;
+        },
+
+
         /**
          * Gets baseline information about this Interactive (ID, title, etc.). This is the same information
          * that is returned via mflyDataInit.
          */
         getInteractiveInfo: function () {
-            return $.Deferred(function (dfd) {
-                _internalGetData('interactive', null, dfd);
-            });
+            if (mflyCommands.getDeviceType() === mflyCommands.deviceTypes.web || mflyCommands.getDeviceType() === mflyCommands.deviceTypes.development) {
+                return $.Deferred(function (dfd) {
+                    _internalGetData('interactive', null, dfd);
+                });
+            } else {
+                return $.getJSON('mflyManifest.json');
+            }
         },
         openItem: function (_id) {
-            doControlStatement(prefix + "item/" + _id);
+            var url = prefix + "item/" + _id;
+            if (_isWeb()) {
+                url += '?returnurl=' + encodeURIComponent(window.location.href);
+            }
+            doControlStatement(url);
         },
 
         openFolder: function (_id) {
@@ -253,7 +363,15 @@ var mflyCommands = function () {
         },
 
         addToDownloader: function (id) {
-            doControlStatement(prefix + "control/addToDownloader/" + id);
+            return $.Deferred(function (dfd) {
+                _internalGetData('addToDownloader', id, dfd, false);
+            });
+        },
+
+        removeFromDownloader: function (id) {
+            return $.Deferred(function (dfd) {
+                _internalGetData('removeFromDownloader', id, dfd, false);
+            });
         },
 
         showAnnotations: function (x, y, w, h) {
@@ -281,7 +399,7 @@ var mflyCommands = function () {
         },
 
         showSecondScreenOptions: function () {
-            doControlStatement(prefix + "control/showSecondScreenOptions");
+            doControlStatement(prefix + "control/secondScreenOptions");
         },
 
 
@@ -317,7 +435,7 @@ var mflyCommands = function () {
         embed: function ($e, id, page) {
             if (_isWindows8()) {
                 $.Deferred(function (dfd) {
-                    _internalEmbed(id, page, dfd);
+                    _internalEmbed(id, dfd, {page: page});
                 }).done(function (location, responseText, statusCode) {
                     $e.attr('src', location);
                 }).fail(function () {
@@ -325,25 +443,68 @@ var mflyCommands = function () {
                 });
             } else {
                 $.Deferred(function (dfd) {
-                    _internalEmbed(id, page, dfd);
-                }).done(function () {
-                    var pagepos = (typeof page == 'undefined' || page == null) ? '' : '?position=' + page;
-                    $e.attr('src', prefix + 'data/embed/' + id + pagepos);
+                    _internalEmbed(id, dfd, {page: page});
+                }).done(function (url) {
+                    if (_isWeb()) {
+                        $e.attr('src', url);
+                    }
+                    else {
+                        var pagepos = (typeof page == 'undefined' || page == null) ? '' : '?position=' + page;
+                        $e.attr('src', prefix + 'data/embed/' + id + pagepos);
+                    }
                 }).fail(function () {
                     console.log('mflyCommands.js: embed failed. id=' + id + ' page=' + page + ' $e=', $e);
                 });
             }
         },
+
+        embedImage: function ($e, id, options) {
+            options = (typeof options === 'undefined') ? { } : options;
+            if (_isWindows8()) {
+                $.Deferred(function (dfd) {
+                    _internalEmbed(id, dfd, options);
+                }).done(function (location, responseText, statusCode) {
+                    $e.attr('src', location);
+                }).fail(function () {
+                    console.log('mflyCommands.js: embed failed. id=' + id + ' $e=', $e);
+                });
+            } else {
+                $.Deferred(function (dfd) {
+                    _internalEmbed(id, dfd, options);
+                }).done(function (url) {
+                    if (_isWeb()) {
+                        $e.attr('src', url);
+                    }
+                    else {
+                        $e.attr('src', prefix + 'data/embed/' + id);
+                    }
+                }).fail(function () {
+                    console.log('mflyCommands.js: embed failed. id=' + id + ' $e=', $e);
+                });
+            }
+        },
+
         /**
-         * Get raw data of Interactive via the embed function.
-         * @param id Airship ID of the item to embed. Currently limited to images and other Interactives
-         * @return a deferred that will resolve with body and status code on completion.
+         * Post the action to Mediafly Reporting, in the case of embedding specific pages into an Interactive.
+         * @param id Airship ID of the item shown
+         * @param page Page of the item shown
          */
+        postPageView: function(id, page) {
+            return $.Deferred(function (dfd) {
+                _internalGetData("postaction", id + "?page=" + page, dfd);
+            });
+        },
+
+        /**
+        * Get raw data of Interactive via the embed function.
+        * @param id Airship ID of the item to embed. Currently limited to images and other Interactives
+        * @return a deferred that will resolve with body and status code on completion.
+        */
         getData: function (id) {
             if (mflyCommands.isWindows8()) {
                 return $.Deferred(function (dfd2) {
                     $.Deferred(function (dfd) {
-                        _internalEmbed(id, null, dfd);
+                        _internalEmbed(id, dfd);
                     }).done(function (location, responseText, statusCode) {
                         if (statusCode === 301) {
                             var url = location;
@@ -361,36 +522,78 @@ var mflyCommands = function () {
                 });
             } else {
                 return $.Deferred(function (dfd) {
-                    _internalEmbed(id, null, dfd);
+                    _internalEmbed(id, dfd);
                 });
             }
         },
 
-
+        getSyncStatus: function () {
+            return $.Deferred(function (dfd) {
+                _internalGetData('getSyncStatus', null, dfd);
+            });
+        },
         getValue: function (key) {
             return $.Deferred(function (dfd) {
-                _internalGetData('info', key, dfd, false);
+                if (mflyCommands.getDeviceType() === mflyCommands.deviceTypes.web) {
+                    var value =  localStorage.getItem(key);
+                    if (value) {
+                        dfd.resolveWith(this, [value, 200]);
+                    } else {
+                        dfd.rejectWith(this, [value, 404]);
+                    }
+                } else {
+                    _internalGetData('info', key, dfd, false);
+                }
             });
         },
         getValues: function (prefix) {
             if (typeof prefix != 'undefined') {
                 // Get values with specified prefix
-                return $.Deferred(function (dfd) {
-                    _internalGetData('info?prefix=' + prefix, null, dfd);
-                });
+                if (mflyCommands.getDeviceType() == mflyCommands.deviceTypes.web) {
+                    return $.Deferred(function (dfd) {
+                        var all = {};
+                        for (var key in localStorage) {
+                            // Check if key startswith prefix
+                            if (key.slice(0, prefix.length) == prefix) {
+                                all[key] = localStorage.getItem(key);
+                            }
+                        }
+                        dfd.resolveWith(this, [all, 200]);
+                    })
+                } else {
+                    return $.Deferred(function (dfd) {
+                        _internalGetData('info?prefix=' + prefix, null, dfd);
+                    });
+                }
             } else {
                 // Get ALL values
-                return $.Deferred(function (dfd) {
-                    _internalGetData('info', null, dfd);
-                });
+                if (mflyCommands.getDeviceType() == mflyCommands.deviceTypes.web) {
+                    return $.Deferred(function (dfd) {
+
+                        var all = {};
+                        for (var key in localStorage) {
+                            all[key] = localStorage.getItem(key);
+                        }
+                        dfd.resolveWith(this, [all, 200]);
+                    })
+                } else {
+                    return $.Deferred(function (dfd) {
+                        _internalGetData('info', null, dfd);
+                    });
+                }
             }
         },
         putValue: function (key, value) {
             return $.Deferred(function (dfd) {
-                _internalPutData(key, value, dfd);
+                _internalPutKeyData(key, value, dfd);
             });
         },
 
+        deleteKey: function (key) {
+            return $.Deferred(function (dfd) {
+                _internalDeleteKey(key, dfd);
+            })
+        },
 
         getOnlineStatus: function () {
             return $.Deferred(function (dfd) {
@@ -433,6 +636,25 @@ var mflyCommands = function () {
         },
 
         /**
+         * Create a Collection with name "name"
+         */
+        createCollection: function (name) {
+            return $.Deferred(function (dfd) {
+                _internalGetData('createCollection?name=' + name, null, dfd);
+            });
+        },
+
+        /**
+         * Add item to Collection
+         */
+        addItemToCollection: function (collectionId, itemId) {
+            return $.Deferred(function (dfd) {
+                // Call internalGetData, but ensure that we do NOT expect JSON in the response.
+                _internalGetData('addItemToCollection?id=' + collectionId + '&item=' + itemId, null, dfd, false);
+            });
+        },
+
+        /**
          * Get notification status for an item.
          */
         getNotificationStatus: function (id) {
@@ -462,7 +684,24 @@ var mflyCommands = function () {
          */
         search: function (term) {
             return $.Deferred(function (dfd) {
-                _internalGetData('search?term=' + term, null, dfd)
+                _internalGetData('search?term=' + encodeURIComponent(term), null, dfd)
+            });
+        },
+
+        /**
+         * Filter against metadata values.
+         * Parameter: JSON object of key/value combinations. E.g. { { "type": "folder", "isPresent": true } }
+         */
+        filter: function (obj) {
+            return $.Deferred(function (dfd) {
+                console.log("obj=",obj);
+                var qs = "";
+                for (var key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        qs = qs + key + '=' + obj[key] + '&';
+                    }
+                }
+                _internalGetData('filter?' + qs.slice(0, -1), null, dfd)
             });
         },
 
@@ -480,7 +719,7 @@ var mflyCommands = function () {
             if (_isWindows8()) {
                 return false;
             } else {
-                return (window.location.origin.indexOf('localhost') > -1);
+                return (window.location.host.indexOf('localhost:8000') > -1);
             }
         },
         isWindows8: function () {
@@ -494,35 +733,69 @@ var mflyCommands = function () {
             if (prefix == "mfly://" && _isWindows8()) {
                 doControlStatement(prefix + "control/ready");
             }
+        },
+
+        logout: function () {
+            if (mflyCommands.getDeviceType() == mflyCommands.deviceTypes.web) {
+                doControlStatement(prefix + "control/logout");
+            }
+            else if (mflyCommands.getDeviceType() == mflyCommands.deviceTypes.mobile) {
+                return $.Deferred(function (dfd) {
+                    _internalGetData('logout', null, dfd);
+                });
+            }
         }
     }
 }();
 
 /**
- * Set the prefix, based on whether this is a development instance or not.
+ * Set the prefix, based on whether this a development, web, or mobile version of the browser.
+ * Requires iOS version ___, Android version ___, and Windows 8 version ___ to work correctly.
  */
-mflyCommands.setPrefix(mflyCommands.isLocalhostForDevelopment() ? "http://localhost:8000/" : "mfly://");
+(function (mflyCommands) {
+    var developmentPrefix = "http://localhost:8000/";
+    var webPrefix = "/interactive-api/";
+    var mobilePrefix = "mfly://";
 
+    // First, assume this is mobile with no additional input.
+    mflyCommands.setPrefix(mobilePrefix);
+    mflyCommands.setDeviceType(mflyCommands.deviceTypes.mobile);
+
+    // If the local dev server is running, set the dev prefix
+    if (mflyCommands.isLocalhostForDevelopment()) {
+        mflyCommands.setPrefix(developmentPrefix);
+        mflyCommands.setDeviceType(mflyCommands.deviceTypes.development);
+    } else {
+        for (var i = 0; i < document.cookie.split(';').length; i++) {
+            if (document.cookie.split(';')[i].split('=')[0].toLowerCase().trim() === 'devicetype') {
+                // This is a web device
+               mflyCommands.setPrefix(webPrefix);
+               mflyCommands.setDeviceType(mflyCommands.deviceTypes.web);
+            }
+        }
+    }
+
+})(mflyCommands);
 
 /**
- * Needed for Windows 8 support.
- */
+* Needed for Windows 8 support.
+*/
 $(document).ready(function () {
     mflyCommands.documentReady();
 });
 
 
 /**
- *  Base64 encode / decode.
- *  Needed for Windows 8 support.
- *  http://www.webtoolkit.info/
- *
- **/
+*  Base64 encode / decode.
+*  Needed for Windows 8 support.
+*  http://www.webtoolkit.info/
+*
+**/
 var Base64 = function () {
 
     /**
-     * Private variables and functions
-     */
+    * Private variables and functions
+    */
 
     var _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 

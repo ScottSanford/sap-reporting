@@ -9,7 +9,8 @@ angular.module('reporting', [
 
 	.constant('moment', moment)
 
-	.config(function($routeProvider){
+	.config(function($routeProvider, $compileProvider){
+		$compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|mfly):/);  
 		$routeProvider
 			.when('/', {
 				templateUrl: 'partials/summaries.html', 
@@ -17,7 +18,7 @@ angular.module('reporting', [
 				resolve: {
 							summaryData: function(reportingInitialData){
 								return reportingInitialData();
-							}		
+							}
 						}
 			})
 			.when('/topten', {
@@ -26,17 +27,61 @@ angular.module('reporting', [
 				resolve: {
 							summaryData: function(reportingInitialData){
 								return reportingInitialData();
-							}		
+							}	
 						}
 			})
-			.otherwise({redirectTo:'/'})
+			.otherwise({
+				redirectTo:'/'
+			})
 	})
 
-	.controller('HeaderCtrl', function($scope){
+	.controller('HeaderCtrl', function($scope, registeredUsersData){
+
 		$scope.date = Date.now();
+
+		// registered users date
+
+		mflyCommands.search('@ReportingRegisteredUsers').done(function(data){
+			console.log(data);
+			var date = data[0]['received'];
+			var dateSplit = date.substr(0,10);
+			var createDate = new Date(dateSplit);
+			var day = 60 * 60 * 24 * 1000;
+			var setDate = new Date(createDate.getTime() + day);
+			var momentDate = moment(setDate).format('ll');
+			console.log(momentDate);
+			$scope.lastupdatedate = momentDate;
+		})		
+
+		var checkIfRegisteredUser = function(row){
+			// @mediafly\.com
+			if (!row.User.match(/@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
+				return true;
+			}
+
+			return false;
+		};
+
+		var checkIfRepeatUser = function(row) {			
+	  		if (row.User === -1) {
+	  			return true;
+			} if (row.user === 1) {	
+				return false;
+			}
+		}
+
+	    registeredUsersData.registeredUsers.then(function(data){
+	    	var data = data.filter(checkIfRegisteredUser);
+	    	$scope.registered = data;
+	    });
 	})
 
 	.controller('SummariesCtrl', function($scope, summaryData, moment){
+		
+
+		// function getRegisteredUserCount() {
+
+		// }
 
 		// GET LATEST RECORD *************************************
 		var getLatestRecord = function() {
@@ -46,14 +91,13 @@ angular.module('reporting', [
 			// loop through data
 			for (var i = 0; i < summaryData.length; i++) {
 				// grab date record
-				var dateRecords = summaryData[i].IntervalStartDate;
+				var dateRecords = summaryData[i].IntervalStart;
 				// parse string into date
 				var dateRecordtoDate = new Date(dateRecords);
 				if (latestRecord == null || latestRecord < dateRecordtoDate) {
 					latestRecord = dateRecordtoDate;
 				}
 			}
-
 			// return latest record date
 			return latestRecord;
 		}
@@ -62,7 +106,7 @@ angular.module('reporting', [
 
 		var checkIfActiveUser = function(row){
 
-			if (!row.UserName.match(/@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
+			if (!row.User.match(/@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
 				return true;
 			}
 
@@ -71,7 +115,7 @@ angular.module('reporting', [
 
 		var checkIfGuest = function(row) {
 
-			if (row.UserName.match(/Guest of/)) {
+			if (row.User.match(/Guest of/)) {
 				return true;
 			}
 
@@ -87,9 +131,9 @@ angular.module('reporting', [
 			if (isUser) {
 	  			// increment allViewsCount
 				rolledUpData.allViewsCount += Number(record.Views - 1);
-		  		// if (rolledUpData.activeUsers.indexOf(record.UserName) === -1) {
-		  			rolledUpData.activeUsers.push(record.UserName);
-		  		// }
+		  		if (rolledUpData.activeUsers.indexOf(record.User) === -1) {
+		  			rolledUpData.activeUsers.push(record.User);
+		  		}
 			}
 
 			// do user guest things
@@ -106,7 +150,7 @@ angular.module('reporting', [
 		// date ranges for data dates to pass through to find which "range" it belongs to
 		var dateRangeFilter = function(dateRange, row) {
 	
-			var rowDate = new Date(row.IntervalStartDate);
+			var rowDate = new Date(row.IntervalStart);
 			var rowDateFormatted = moment(rowDate);
 
 			if (dateRange.start <= rowDateFormatted && rowDateFormatted <= dateRange.end) {
@@ -136,8 +180,8 @@ angular.module('reporting', [
 		function getQuarterRanges() {
 			var latestRecord = getLatestRecord();
 
-			var start = moment(latestRecord).subtract(2, 'months').date(1);
-			var end   = moment(latestRecord).date(31);
+			var start = moment(latestRecord).startOf('quarter');
+			var end   = moment(latestRecord).endOf('quarter');
 
 			return [
 				{ start: moment(start), end: moment(end) },
@@ -150,7 +194,7 @@ angular.module('reporting', [
 
 		function displayQuarterDate(record) { 
 
-			var recordDate  = new Date(record.IntervalStartDate);
+			var recordDate  = new Date(record.IntervalStart);
 
 			var end = recordDate;
 
@@ -193,20 +237,22 @@ angular.module('reporting', [
 			var latestRecord = getLatestRecord();
 
 			var start = moment(latestRecord).date(1);
-			var end   = moment(latestRecord).date(31);
+			var end   = moment(latestRecord).endOf('month');
 
-			return [
+
+			var output = [
 				{ start: moment(start), end: moment(end) },
-				{ start: moment(start).subtract(1, 'month'), end: moment(end).subtract(1, 'month') },
-				{ start: moment(start).subtract(2, 'month'), end: moment(end).subtract(2, 'month') },
-				{ start: moment(start).subtract(3, 'month'), end: moment(end).subtract(3, 'month') },
-				{ start: moment(start).subtract(4, 'month'), end: moment(end).subtract(4, 'month') }
+				{ start: moment(start).subtract(1, 'month'), end: moment(start).subtract(1, 'month').endOf('month') },
+				{ start: moment(start).subtract(2, 'month'), end: moment(start).subtract(2, 'month').endOf('month') },
+				{ start: moment(start).subtract(3, 'month'), end: moment(start).subtract(3, 'month').endOf('month') },
+				{ start: moment(start).subtract(4, 'month'), end: moment(start).subtract(4, 'month').endOf('month') }
 			]
+			return output;
 		}
 
 		function displayMonthDate(record) { 
 
-			var recordDate  = new Date(record.IntervalStartDate);
+			var recordDate  = new Date(record.IntervalStart);
 
 			var end = recordDate.endOfMonth();
 
@@ -270,7 +316,7 @@ angular.module('reporting', [
 
 		function displayWeekDate(record) { 
 
-			var recordDate  = new Date(record.IntervalStartDate);
+			var recordDate  = new Date(record.IntervalStart);
 
 			var end = recordDate.endOfWeek();
 
@@ -315,23 +361,52 @@ angular.module('reporting', [
     	$scope.untilDate = null;
 
     	$scope.search = function(){
-    		// $scope.toptenForm.$valid && inputDateRangeFilter == true  ?
 			if ($scope.toptenForm.$valid) {
 
         		var f = summaryData.filter(inputDateRangeFilter)
         						   .filter(checkIfActiveUser)
         						   .filter(checkIfNotGuest)
-        						   .sort(compareViewCount).reverse()
-        						   .slice(0,10);						 
-        									 
+        						   .map(fixViewsCount);
 
-        		$scope.topUsers = f;
-
+       			$scope.topUsers = flattenUsers(f).slice(0, 10);
 			}
     	}
 
+		var fixViewsCount = function(record) {
+
+  			record.Views = Number(record.Views) - 1;
+			return record;
+		}
+
+    	function flattenUsers(filteredUserRecords) {
+
+		    var users = [];		    
+		    for (var i = 0; i < filteredUserRecords.length; i++) {
+
+		    	var user = getUser(filteredUserRecords[i], users);
+		    	if (user === null) {
+		    		users.push(filteredUserRecords[i]);
+		    	} else {
+		    		user.Views = Number(user.Views) + Number(filteredUserRecords[i].Views);
+		    	}
+		    }
+
+    		return users.sort(compareViewCount).reverse();
+    	}
+
+    	function getUser(userRecord, userRecords) {
+
+    		for(var i = 0; i < userRecords.length; i++) {
+    			if (userRecords[i].User == userRecord.User) {
+    				return userRecords[i];
+    			}
+    		}
+
+    		return null;
+    	}
+
     	function inputDateRangeFilter(row) {
-    		var rowDate = new Date(row.IntervalStartDate);
+    		var rowDate = new Date(row.IntervalStart);
 
     		if ($scope.fromDate <= rowDate && rowDate <= $scope.untilDate) {
 				return true;
@@ -341,32 +416,20 @@ angular.module('reporting', [
 
     	}
 
-    	function getTopTenUsers(row) {
-		    var topTenUsers = [];		    
-		    for (var i = 0; i < summaryData.length; i++) {
-		    	var userNameRecords = summaryData[i].UserName;
-		        topTenUsers.push(userNameRecords);
-		        if (topTenUsers.length > 10) {
-		            topTenUsers.pop();
-		        }
-		    }
-		    return topTenUsers;
-		    $scope.topUsers = topTenUsers;
-    	}
-
-
 		function compareViewCount(a, b) {
-		  if (Number(a.Views) < Number(b.Views)) {
-		    return -1;
-		  }
-		  if (Number(a.Views) >= Number(b.Views)) {
-		    return 1;
-		  }
+			var previousNum = Number(a.Views - 1);
+			var nextNum = Number(b.Views - 1);
+			if (previousNum < nextNum) {
+			    return -1;
+			}
+			if (previousNum >= nextNum) {
+			    return 1;
+			}
 		}
 
 		var checkIfActiveUser = function(row){
 
-			if (!row.UserName.match(/@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
+			if (!row.User.match(/@mediafly\.com|@appirio\.com|@liveaxle\.com|john\.lark@sap\.com|gregory\.spray@sap\.com|kami\.kawai@sap\.com|Guest of|Share Link/)) {
 				return true;
 			}
 
@@ -375,32 +438,24 @@ angular.module('reporting', [
 
 		var checkIfNotGuest = function(row) {
 
-			if (row.UserName.match(/Guest of/)) {
+			if (row.User.match(/Guest of/)) {
 				return false;
 			}
 
 			return true;
 		};
 
-		// $scope.topUsers = getQuarterRanges().map(function(quarter){
+		var uniqueUser = function(row) {
+			if (row.indexOf(row.User) === -1) {
+				return true;
+			}
+				return false;
+		}
 
-		// 	var initValue = {
-		// 		date: moment(quarter.end).format("QqYY"),
-		// 	    activeUsers: [],
-		// 	    allViewsCount: 0, 
-	 //  			guestUsersCount: 0,
-		// 	    guestViewsCount: 0
-		// 	};
-
-		// 	var data = summaryData
-		// 		.filter(inputDateRangeFilter.bind(this, quarter))
-
-		// 	return data;
-		// });
-
-		$scope.number = 10;
-		$scope.getNumber = function(num) {
-			return new Array(num);
+		var addDuplicateUserViews = function(data, row) {
+			if (data.indexOf(row) >= 0) {
+				row.Views++
+			}
 		}
 	})
 

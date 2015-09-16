@@ -3,23 +3,6 @@ body {
 	font-family: 'Arial';
 }
 
-.loading {
-  position:relative;
-  height:100%;
-}
-
-.loading:before {
-  position:absolute;
-  content:"";
-  left:0;
-  bottom:0;
-  right:0;
-  top:0;
-  z-index:1000;
-  background:rgba(255,255,255,0.9) no-repeat center center;
-  background-image: url('../images/loader.gif');
-}
-
 header {
 	text-align: center;
 	font-weight: 600;
@@ -27,9 +10,27 @@ header {
 	margin-top: 0px;
 }
 
+.refresh-btn {
+	position: absolute;
+	top:0;
+	right:0;
+}
+
 .panel-default .panel-heading {
 	background-color: #008FD3;
 	color: #fff;
+	margin-bottom: 0;
+	border-radius: 0;
+}
+
+.registered-users {
+	padding:3px 0 3px 40px;
+	margin-bottom: 10px;
+	height:100%;
+	width:100%;
+	background-color: #d3d3d3;
+	color:#fff;
+	font-size: 1.2em;
 }
 
 .panel-default {

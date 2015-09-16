@@ -15,10 +15,10 @@
         <tbody>
           <tr ng-repeat="quarterly in quarters track by $index">
            <td>{{quarterly.date}}</td>
-           <td>{{quarterly.activeUsers.length}}</td>
-           <td>{{quarterly.allViewsCount}}</td>
-           <td>{{quarterly.guestUsersCount}}</td>
-           <td>{{quarterly.guestViewsCount}}</td> 
+           <td>{{quarterly.activeUsers.length | number}}</td>
+           <td>{{quarterly.allViewsCount | number}}</td>
+           <td>{{quarterly.guestUsersCount | number}}</td>
+           <td>{{quarterly.guestViewsCount | number}}</td> 
           </tr>    
         </tbody> 
     </table>
@@ -36,10 +36,10 @@
         <tbody>
           <tr ng-repeat="monthly in months track by $index">
            <td>{{monthly.date}}</td>
-           <td>{{monthly.activeUsers.length}}</td>
-           <td>{{monthly.allViewsCount}}</td>
-           <td>{{monthly.guestUsersCount}}</td>
-           <td>{{monthly.guestViewsCount}}</td>
+           <td>{{monthly.activeUsers.length | number}}</td>
+           <td>{{monthly.allViewsCount | number}}</td>
+           <td>{{monthly.guestUsersCount | number}}</td>
+           <td>{{monthly.guestViewsCount | number}}</td>
           </tr>    
         </tbody> 
     </table>
@@ -57,10 +57,10 @@
         <tbody>
           <tr ng-repeat="weekly in weeks track by $index">
              <td>{{weekly.date}}</td>
-             <td>{{weekly.activeUsers.length}}</td>
-             <td>{{weekly.allViewsCount}}</td>
-             <td>{{weekly.guestUsersCount}}</td>
-             <td>{{weekly.guestViewsCount}}</td>
+             <td>{{weekly.activeUsers.length | number}}</td>
+             <td>{{weekly.allViewsCount | number}}</td>
+             <td>{{weekly.guestUsersCount | number}}</td>
+             <td>{{weekly.guestViewsCount | number}}</td>
           </tr>    
         </tbody> 
     </table> 

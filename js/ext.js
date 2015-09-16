@@ -31,6 +31,8 @@ $(document).ready(function(){
 		mflyCommands.email("f7e484d0e3ee4e87901ee34fe2fcbe1aproduct165484");
 	})
 
+
+
 	// Ticketed to add API call for comments and notes
 
 	// $('.comments').bind("touchstart click" , function(){
@@ -46,10 +48,11 @@ $(document).ready(function(){
 	})
 
 	$('.next').bind("touchstart click", function(){
+		console.log('closed');
 		mflyCommands.next();
 	})
-
-	$('.close').bind("touchstart click" , function(){
+	
+	$('.close-btn').bind("touchstart click" , function(){
 		$('#menu').trigger("close.mm");
 		mflyCommands.close();
 	})
